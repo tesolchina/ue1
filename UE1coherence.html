@@ -1,0 +1,1797 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UE1: Analyzing Text Coherence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/5.1.1/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        'primary-light': '#7C7CE8',
+                        'primary-dark': '#4A4BC9'
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-canvas {
+            min-height: 500px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .slide-content {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .dark .slide-content {
+            background: rgba(31, 41, 55, 0.95);
+        }
+        .teacher-note {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(to right, #fef3c7, #fef9e7);
+        }
+        .dark .teacher-note {
+            background: linear-gradient(to right, #451a03, #292524);
+        }
+        .reading-text {
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        .coherent-highlight {
+            background: rgba(34, 197, 94, 0.2);
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .incoherent-highlight {
+            background: rgba(239, 68, 68, 0.2);
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .toggle-section {
+            transition: max-height 0.3s ease-in-out;
+            overflow: hidden;
+        }
+        .toggle-section.collapsed {
+            max-height: 0;
+        }
+        .toggle-section.expanded {
+            max-height: 2000px;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- Header -->
+    <header class="bg-primary text-white p-4 shadow-lg">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center mb-2">
+                <div>
+                    <h1 class="text-xl font-bold">UE1: University English I</h1>
+                    <p class="text-sm opacity-90">Analyzing Text Coherence</p>
+                </div>
+                <button id="exportNotesBtn" class="px-4 py-2 bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
+                    📄 Export Notes
+                </button>
+            </div>
+            <div class="text-sm opacity-80">
+                <span>🎯 Learning Objective: Identify and analyze coherence devices in academic texts</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Teacher Notes Toggle -->
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-700">
+        <div class="container mx-auto">
+            <button id="teacherNotesToggle" class="w-full p-3 text-left font-medium flex justify-between items-center hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors">
+                <span class="text-yellow-800 dark:text-yellow-200">👩‍🏫 Teacher Notes &amp; Implementation Guide</span>
+                <span id="teacherNotesIcon" class="text-yellow-600">▼</span>
+            </button>
+            <div id="teacherNotesSection" class="toggle-section collapsed">
+                <div class="teacher-note p-6 m-4 rounded-lg">
+                    <h3 class="font-semibold text-yellow-800 dark:text-yellow-200 mb-3">Implementation Strategy</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div>
+                            <h4 class="font-medium mb-2">🎯 Pedagogical Approach</h4>
+                            <ul class="space-y-1 text-yellow-700 dark:text-yellow-300">
+                                <li>• <strong>Discovery Learning:</strong> Students identify patterns before explicit instruction</li>
+                                <li>• <strong>Comparative Analysis:</strong> Side-by-side examples highlight differences</li>
+                                <li>• <strong>AI Integration:</strong> Students use AI for deeper analysis and feedback</li>
+                                <li>• <strong>Peer Discussion:</strong> Collaborative learning through text analysis</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-2">⏰ Timing &amp; Structure</h4>
+                            <ul class="space-y-1 text-yellow-700 dark:text-yellow-300">
+                                <li>• <strong>Slides (15 min):</strong> Concept introduction with embedded assessment</li>
+                                <li>• <strong>Reading Analysis (20 min):</strong> Guided text comparison</li>
+                                <li>• <strong>AI Consultation (10 min):</strong> Individual reflection and AI feedback</li>
+                                <li>• <strong>Discussion (15 min):</strong> Peer sharing and synthesis</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-4 bg-white dark:bg-gray-800 rounded border">
+                        <h4 class="font-medium mb-2">🤖 AI Integration Rationale</h4>
+                        <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                            This lesson demonstrates AI as a <em>learning partner</em> rather than a replacement for critical thinking. 
+                            Students analyze texts independently first, then use AI to validate findings, discover missed patterns, 
+                            and explore alternative perspectives. This scaffolded approach builds both analytical skills and AI literacy.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 max-w-6xl">
+        
+        <!-- Slides Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">📚 Understanding Text Coherence</h2>
+            
+            <!-- Slide Canvas -->
+            <div class="slide-canvas rounded-lg mb-6 flex items-center justify-center relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <defs>
+                            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"></path>
+                            </pattern>
+                        </defs>
+                        <rect width="100" height="100" fill="url(#grid)"></rect>
+                    </svg>
+                </div>
+                
+                <div class="slide-content rounded-lg p-8 m-4 w-full max-w-5xl relative z-10">
+                    <div id="slideContainer">
+                        <!-- Slides will be dynamically loaded here -->
+                    </div>
+                    
+                    <!-- Slide Navigation -->
+                    <div class="flex justify-between items-center mt-6">
+                        <button id="prevSlide" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50">
+                            ← Previous
+                        </button>
+                        <span id="slideCounter" class="font-medium text-gray-600 dark:text-gray-400">1 / 5</span>
+                        <button id="nextSlide" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Embedded Questions -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4 text-primary">🎯 Check Your Understanding</h3>
+                <div id="questionContainer">
+                    <!-- Questions will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Reading Analysis Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">📖 Comparative Text Analysis</h2>
+            
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-2">📋 Your Task</h3>
+                <p class="text-blue-600 dark:text-blue-400">
+                    Read both texts below and identify specific coherence devices (or lack thereof). 
+                    Note how the coherent text guides readers smoothly from one idea to the next, 
+                    while the incoherent text creates confusion and disrupts understanding.
+                </p>
+            </div>
+
+            <!-- Coherent Text Analysis -->
+            <div class="mb-8">
+                <h3 class="font-semibold text-green-700 dark:text-green-300 mb-4 text-lg">✅ Text A: Coherent Example</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-6">
+                        <div class="reading-text text-gray-700 dark:text-gray-300">
+                            <p>Climate change represents one of the most pressing challenges of our time. <span class="coherent-highlight">As global temperatures continue to rise</span>, scientists have documented increasingly severe weather patterns worldwide.</p>
+                            
+                            <p><span class="coherent-highlight">These extreme weather events</span> include devastating hurricanes, prolonged droughts, and unprecedented flooding. <span class="coherent-highlight">For example</span>, Hurricane Katrina in 2005 demonstrated how warming ocean temperatures can fuel more powerful storms.</p>
+                            
+                            <p><span class="coherent-highlight">Moreover</span>, rising sea levels threaten coastal communities globally. <span class="coherent-highlight">This phenomenon occurs because</span> warmer temperatures cause both thermal expansion of seawater and melting of polar ice caps.</p>
+                            
+                            <p><span class="coherent-highlight">Consequently</span>, urgent action is required at both individual and governmental levels. <span class="coherent-highlight">Only through coordinated efforts</span> can humanity hope to mitigate these escalating environmental threats.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                        <h4 class="font-semibold mb-3 text-green-700 dark:text-green-300">🔍 Coherence Analysis</h4>
+                        <div class="space-y-4 text-sm">
+                            <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded">
+                                <h5 class="font-medium">🔗 Transitional Devices</h5>
+                                <ul class="mt-1 text-xs space-y-1">
+                                    <li>"<strong>As</strong>" - temporal connection</li>
+                                    <li>"<strong>For example</strong>" - illustration</li>
+                                    <li>"<strong>Moreover</strong>" - addition</li>
+                                    <li>"<strong>Consequently</strong>" - cause-effect</li>
+                                </ul>
+                            </div>
+                            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded">
+                                <h5 class="font-medium">👉 Pronoun Reference</h5>
+                                <ul class="mt-1 text-xs space-y-1">
+                                    <li>"<strong>These events</strong>" → weather patterns</li>
+                                    <li>"<strong>This phenomenon</strong>" → sea level rise</li>
+                                </ul>
+                            </div>
+                            <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded">
+                                <h5 class="font-medium">📏 Logical Flow</h5>
+                                <p class="mt-1 text-xs">Problem → Examples → Explanation → Solution (clear cause-effect pattern)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Incoherent Text Analysis -->
+            <div class="mb-6">
+                <h3 class="font-semibold text-red-700 dark:text-red-300 mb-4 text-lg">❌ Text B: Less Coherent Example</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-6">
+                        <div class="reading-text text-gray-700 dark:text-gray-300">
+                            <p>Climate change is a problem. <span class="incoherent-highlight">Scientists study weather</span>. Many places have hot temperatures now.</p>
+                            
+                            <p><span class="incoherent-highlight">Hurricanes are storms with wind</span>. People live near oceans. In 2005 there was Hurricane Katrina. <span class="incoherent-highlight">Water is wet</span>.</p>
+                            
+                            <p><span class="incoherent-highlight">Ice melts when it's hot</span>. Polar bears live in cold places. Sea levels change sometimes. <span class="incoherent-highlight">Governments make laws</span>.</p>
+                            
+                            <p>People should do things about climate change. <span class="incoherent-highlight">Cars use gasoline</span>. The environment needs protection. <span class="incoherent-highlight">Trees are green</span>.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                        <h4 class="font-semibold mb-3 text-red-700 dark:text-red-300">❌ Coherence Problems</h4>
+                        <div class="space-y-4 text-sm">
+                            <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded">
+                                <h5 class="font-medium">🚫 Missing Transitions</h5>
+                                <p class="mt-1 text-xs">No connecting words between ideas - abrupt topic jumps</p>
+                            </div>
+                            <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded">
+                                <h5 class="font-medium">🔗 Unclear References</h5>
+                                <p class="mt-1 text-xs">No pronouns linking back to previous ideas</p>
+                            </div>
+                            <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded">
+                                <h5 class="font-medium">🌀 Random Information</h5>
+                                <ul class="mt-1 text-xs space-y-1">
+                                    <li>"Water is wet" - irrelevant</li>
+                                    <li>"Trees are green" - unrelated</li>
+                                    <li>"Polar bears..." - disconnected</li>
+                                </ul>
+                            </div>
+                            <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded">
+                                <h5 class="font-medium">📉 No Logical Pattern</h5>
+                                <p class="mt-1 text-xs">Ideas scattered without clear organization or purpose</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Framework -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                <h3 class="font-semibold mb-4">🔍 Analysis Framework</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 border border-gray-200 dark:border-gray-600 rounded">
+                        <h4 class="font-medium text-blue-600 dark:text-blue-400 mb-2">🔗 Transitional Devices</h4>
+                        <p class="text-sm">Look for words/phrases that connect ideas: "however," "therefore," "for example," "in addition"</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 dark:border-gray-600 rounded">
+                        <h4 class="font-medium text-green-600 dark:text-green-400 mb-2">🎯 Pronoun Reference</h4>
+                        <p class="text-sm">Check if pronouns clearly refer back to specific nouns from previous sentences</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 dark:border-gray-600 rounded">
+                        <h4 class="font-medium text-purple-600 dark:text-purple-400 mb-2">📏 Logical Flow</h4>
+                        <p class="text-sm">Evaluate if ideas progress logically from general to specific or cause to effect</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Notes -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold mb-4">📝 Your Analysis Notes</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Coherence devices you identified in Text A:</label>
+                        <textarea id="coherentDevices" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="List specific transitional words, pronoun references, and logical connections..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Problems you noticed in Text B:</label>
+                        <textarea id="incoherentProblems" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="Describe unclear connections, abrupt topic changes, missing transitions..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">How would you improve Text B?</label>
+                        <textarea id="improvementSuggestions" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="Suggest specific changes to make Text B more coherent..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Consultation Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">🤖 AI Consultation &amp; Reflection</h2>
+            
+            <!-- Bytewise Platform Instructions -->
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-6 mb-6">
+                <h3 class="font-semibold text-indigo-700 dark:text-indigo-300 mb-4">💙 Access Your Specialized Coherence Tutor</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-medium mb-3">🚀 Getting Started with Bytewise</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-start space-x-2">
+                                <span class="text-indigo-500 font-bold">1.</span>
+                                <div>
+                                    <span>Register as a student: </span>
+                                    <a href="https://chat.hkbu.life/#/register" target="_blank" class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800">
+                                        https://chat.hkbu.life/#/register
+                                    </a>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Use your personal email (HKBU SSO login coming soon)</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-indigo-500 font-bold">2.</span>
+                                <div>
+                                    <span>Enroll in UE1 course: </span>
+                                    <a href="https://chat.hkbu.life/#/student/enroll/bbe2d93d-600c-401c-b3b6-3a938d819a84" target="_blank" class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800">
+                                        Click to enroll
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-indigo-500 font-bold">3.</span>
+                                <div>
+                                    <span>Access Coherence Tutor: </span>
+                                    <a href="https://chat.hkbu.life/#/chat/52364c6f-4426-46d4-82e0-64406944f7d3/session/latest?courseId=b5261338-8637-49d3-a2ae-46b5c18a60bd&amp;courseTitle=UE1+Fall+2025&amp;moduleId=7410369c-4127-4b0c-bed7-7b45409f682e&amp;moduleTitle=Improve+quality+of+language" target="_blank" class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800">
+                                        Start chatting
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded border">
+                        <h4 class="font-medium mb-2 text-indigo-700 dark:text-indigo-300">🎯 Why Use the Coherence Tutor?</h4>
+                        <ul class="text-sm space-y-1">
+                            <li>• Specialized for UE1 text coherence analysis</li>
+                            <li>• Provides targeted feedback on your writing</li>
+                            <li>• Offers guided practice exercises</li>
+                            <li>• Analyzes both published and student texts</li>
+                            <li>• Tracks your learning progress over time</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternative AI Options -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+                    <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-4">Alternative: General AI Assistants</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-start space-x-2">
+                            <span class="text-purple-500 font-bold">1.</span>
+                            <span>Copy your analysis notes using the button below</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-purple-500 font-bold">2.</span>
+                            <span>Open Claude, ChatGPT, or your preferred AI assistant</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-purple-500 font-bold">3.</span>
+                            <span>Use the AI prompt template provided</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-purple-500 font-bold">4.</span>
+                            <span>Ask follow-up questions about coherence patterns</span>
+                        </div>
+                    </div>
+                    
+                    <button id="copyForAIBtn" class="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors w-full">
+                        📋 Copy Analysis for AI Review
+                    </button>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-6">
+                    <h4 class="font-medium mb-3">💬 AI Prompt Template</h4>
+                    <div class="bg-gray-100 dark:bg-gray-700 border rounded p-4 text-sm">
+                        <code class="text-gray-600 dark:text-gray-400">
+                            I'm learning about text coherence in my university English class. I've analyzed two texts - one coherent and one less coherent - and identified coherence devices and problems.
+
+                            Please review my analysis and help me:
+                            1. Verify if I correctly identified coherence devices
+                            2. Point out any patterns I missed
+                            3. Suggest additional ways to improve the incoherent text
+                            4. Explain why these devices matter for academic writing
+
+                            [Your analysis will be inserted here]
+
+                            Please ask follow-up questions to test my understanding.
+                        </code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coherence Tutor Simulation -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-6 mb-6">
+                <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-4">💬 Coherence Tutor Demo: Step-by-Step Conversation</h3>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chat Demo (Left Side) -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg border p-4">
+                            <div id="chatDemo" class="space-y-4 max-h-96 overflow-y-auto">
+                                <!-- Chat messages will appear here dynamically -->
+                            </div>
+                            <div class="mt-4 flex justify-center space-x-3">
+                                <button id="startDemo" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                                    ▶️ Start Demo
+                                </button>
+                                <button id="nextStep" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors hidden">
+                                    ➡️ Next Step
+                                </button>
+                                <button id="resetDemo" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors hidden">
+                                    🔄 Reset Demo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pedagogical Annotations (Right Side) -->
+                    <div class="bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                        <h4 class="font-semibold mb-3 text-blue-700 dark:text-blue-300">🎓 Pedagogical Benefits</h4>
+                        <div id="annotationContainer" class="space-y-4 text-sm">
+                            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                <h5 class="font-medium text-blue-700 dark:text-blue-300 mb-2">Why This Matters</h5>
+                                <p class="text-gray-600 dark:text-gray-400">Click "Start Demo" to see how our AI tutor provides personalized, step-by-step guidance that adapts to individual student needs.</p>
+                            </div>
+                            <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                                <h5 class="font-medium text-green-700 dark:text-green-300 mb-2">Supplements Lecture Content</h5>
+                                <p class="text-gray-600 dark:text-gray-400">The chatbot reinforces concepts from the slides through interactive practice, moving from theory to application.</p>
+                            </div>
+                            <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
+                                <h5 class="font-medium text-purple-700 dark:text-purple-300 mb-2">24/7 Availability</h5>
+                                <p class="text-gray-600 dark:text-gray-400">Students can access personalized help anytime, extending learning beyond classroom hours.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Feedback Notes -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold mb-4">🎯 AI Insights &amp; Feedback</h3>
+                <textarea id="aiFeedback" rows="4" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="Record key insights and feedback from your AI consultation here..."></textarea>
+            </div>
+        </section>
+
+        <!-- Community Discussion -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">👥 Community Discussion</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-6">
+                    <h3 class="font-semibold text-orange-700 dark:text-orange-300 mb-4">Discussion Questions</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-start space-x-2">
+                            <span class="text-orange-500">💭</span>
+                            <span>Which coherence device do you find most effective and why?</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-orange-500">💭</span>
+                            <span>How does lack of coherence affect your reading experience?</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-orange-500">💭</span>
+                            <span>What challenges do you face when writing coherent paragraphs?</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-orange-500">💭</span>
+                            <span>How can AI help improve your writing coherence?</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-6">
+                    <h4 class="font-medium mb-3">📝 Discussion Notes</h4>
+                    <textarea id="discussionNotes" rows="6" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="Record insights from peer discussions and class sharing..."></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Learning Reflection -->
+        <section class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold mb-4">🤔 Learning Reflection</h3>
+                <p class="text-sm mb-3 text-gray-600 dark:text-gray-400">
+                    Reflect on what you've learned about text coherence. How will you apply these insights to your own academic writing?
+                </p>
+                <textarea id="finalReflection" rows="4" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base" placeholder="Your personal reflection on text coherence and its importance in academic writing..."></textarea>
+                
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button id="saveNotesBtn" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                        💾 Save Notes
+                    </button>
+                    <button id="exportAllNotesBtn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        📤 Export Complete Analysis
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Moodle Sharing Instructions -->
+        <section class="mb-8">
+            <div class="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border border-green-200 dark:border-green-700 rounded-lg p-6">
+                <h3 class="font-semibold text-green-700 dark:text-green-300 mb-4">📢 Share Your Learning Journey on Moodle</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-medium mb-3">🎯 What to Share</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">•</span>
+                                <span>One key insight about text coherence from today's lesson</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">•</span>
+                                <span>How the AI consultation helped (or didn't help) your understanding</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">•</span>
+                                <span>A specific example of how you'll apply this to your next assignment</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">•</span>
+                                <span>One question or area you'd like to explore further</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 p-3 bg-white dark:bg-gray-800 rounded border">
+                            <p class="text-xs font-medium mb-1">💡 Suggested Post Template:</p>
+                            <p class="text-xs italic">"Today I learned that [key insight]. The AI helped me understand [specific aspect]. I plan to apply this by [concrete example]. I'm still curious about [question]."</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-medium mb-3">📝 How to Post</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">1.</span>
+                                <span>Go to the UE1 Moodle course page</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">2.</span>
+                                <span>Find the "Text Coherence Lesson Reflections" forum</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">3.</span>
+                                <span>Click "Add a new discussion topic"</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">4.</span>
+                                <span>Use subject line: "Your Name - Coherence Insights"</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">5.</span>
+                                <span>Write your reflection (150-250 words)</span>
+                            </div>
+                            <div class="flex items-start space-x-2">
+                                <span class="text-green-500 font-bold">6.</span>
+                                <span>Read and respond to at least one classmate's post</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Coherence Tutor System Prompt -->
+        <section class="mb-8">
+            <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">🔧 For Teachers: Updated Coherence Tutor System Prompt</h3>
+                <div class="bg-white dark:bg-gray-900 border rounded p-4 text-sm">
+                    <code class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+You are the Coherence Tutor, a specialized AI assistant for UE1 (University English I) students learning about text coherence. Your role is to help students analyze and improve the coherence of written texts.
+
+## Your Primary Functions:
+
+### 1. Analyze Published Texts
+When students share published texts (academic articles, news pieces, textbooks):
+- Identify and explain transitional words/phrases
+- Point out pronoun references and lexical repetition
+- Analyze logical organization patterns (cause-effect, general-specific, compare-contrast, chronological)
+- Highlight effective coherence devices with specific examples
+- Rate overall coherence effectiveness (1-10) with justification
+
+### 2. Analyze Student Writing
+When students share their own writing:
+- Provide gentle, constructive feedback
+- Identify missing or weak transitions
+- Point out unclear pronoun references
+- Suggest specific improvements for better flow
+- Offer alternative sentence/paragraph structures
+- Always balance criticism with encouragement
+
+### 3. Guided Practice Exercises
+Offer interactive practice activities:
+- "Fix this choppy paragraph" exercises
+- "Add appropriate transitions" tasks
+- "Improve pronoun reference" challenges
+- "Reorganize for better logic" activities
+- Ask follow-up questions to test understanding
+
+### 4. Learning Reflection &amp; Report Generation
+Guide students through structured reflection on their coherence learning journey:
+- Ask reflective questions about their understanding of coherence devices
+- Help them identify areas of strength and improvement
+- Connect their learning to future writing assignments
+- Generate a personalized learning report summarizing their progress, insights, and next steps
+
+## Interaction Style:
+- Start each conversation with a menu of 4 options
+- Use encouraging, supportive language
+- Provide specific, actionable feedback
+- Include brief explanations of why certain devices work
+- Ask follow-up questions to deepen learning
+- Relate feedback to academic writing success
+
+## Key Coherence Elements to Focus On:
+- Transitional words (addition, contrast, cause-effect, examples, sequence, conclusion)
+- Pronoun reference (demonstrative, personal pronouns)
+- Lexical repetition and synonyms
+- Logical organization patterns
+- Overall flow and readability
+
+## Menu Structure:
+Always begin conversations by presenting these four options:
+1. Analyze a Published Text
+2. Get Feedback on Your Own Writing  
+3. Guided Practice Exercises
+4. Learning Reflection &amp; Report Generation
+
+## Reflection Process (Option 4):
+When students choose reflection:
+1. Ask about their biggest insights from the coherence lesson
+2. Inquire about which coherence devices they find most/least challenging
+3. Discuss how they plan to apply these concepts in future writing
+4. Explore any remaining questions or areas of confusion
+5. Generate a personalized report with:
+   - Key learning achievements
+   - Identified strengths and growth areas
+   - Specific action steps for improvement
+   - Recommended resources for continued learning
+                    </code>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    This updated system prompt should be configured in the Bytewise platform for the Coherence Tutor chatbot.
+                </p>
+            </div>
+        </section>
+
+        <!-- Lesson Development Reflection -->
+        <section class="mb-8">
+            <div class="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/50 border border-gray-300 dark:border-gray-600 rounded-lg">
+                <button id="developmentToggle" class="w-full p-4 text-left font-medium flex justify-between items-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg">
+                    <span class="text-gray-800 dark:text-gray-200 text-xl font-bold">🛠️ Behind the Scenes: Lesson Development Reflection</span>
+                    <span id="developmentIcon" class="text-gray-600">▼</span>
+                </button>
+                <div id="developmentSection" class="toggle-section expanded">
+                    <div class="p-6">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Development Process -->
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-blue-200 dark:border-blue-700">
+                            <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-3">💻 Development Process</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Built with Poe App Creator</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        This entire lesson was developed using HTML and JavaScript through Poe's App Creator. 
+                                        The platform requires a subscription (affordable at ~$20/month) but provides powerful 
+                                        tools for creating interactive educational content.
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Responsive Design</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Uses TailwindCSS for mobile-first design, ensuring the lesson works seamlessly 
+                                        across devices. Dark mode support provides accessibility for different learning environments.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-green-200 dark:border-green-700">
+                            <h3 class="font-semibold text-green-700 dark:text-green-300 mb-3">🎯 Pedagogical Structure</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Interactive Slides</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Each slide includes embedded tasks for student engagement. Currently, student responses 
+                                        aren't collected, but future versions could provide real-time analytics to teachers 
+                                        showing comprehension patterns and common misconceptions.
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Annotated Examples</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Professional presentation of text analysis with side-by-side comparison and detailed 
+                                        annotations explaining coherence devices. Visual highlighting makes abstract concepts concrete.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Integration -->
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-purple-200 dark:border-purple-700">
+                            <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-3">🤖 AI Integration Process</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
+                                    <h4 class="font-medium mb-2">System Prompt Generation</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Poe App Creator helped generate the specialized system prompt for the Coherence Tutor. 
+                                        This was then deployed on our institutional Bytewise chatbot platform with custom 
+                                        onboarding instructions integrated directly into the lesson.
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Interactive Demo</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Step-by-step chatbot simulation with pedagogical annotations demonstrates AI tutoring 
+                                        capabilities to both students and teachers. Shows real conversation flow and educational benefits.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-orange-200 dark:border-orange-700">
+                            <h3 class="font-semibold text-orange-700 dark:text-orange-300 mb-3">📊 Enhanced Features</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="p-3 bg-orange-50 dark:bg-orange-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Reflection Guidance</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Updated system prompt now includes a fourth menu option for guided reflection. 
+                                        The chatbot helps students process their learning and generates personalized reports 
+                                        summarizing progress, insights, and next steps.
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded">
+                                    <h4 class="font-medium mb-2">Export &amp; Integration</h4>
+                                    <p class="text-gray-600 dark:text-gray-400">
+                                        Students can export their analysis, connect with institutional LMS (Moodle), 
+                                        and continue learning through specialized AI tutoring - creating a complete 
+                                        learning ecosystem that extends beyond the classroom.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Development Benefits -->
+                <div class="mt-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-300 dark:border-blue-600">
+                    <h3 class="font-semibold text-blue-800 dark:text-blue-200 mb-4">🌟 Why This Approach Works</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded border">
+                            <h4 class="font-medium text-green-600 dark:text-green-400 mb-2">Teacher-Friendly</h4>
+                            <p class="text-gray-600 dark:text-gray-400">
+                                No coding experience required. Teachers can focus on pedagogy while the platform 
+                                handles technical implementation. Easy to modify and adapt for different topics.
+                            </p>
+                        </div>
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded border">
+                            <h4 class="font-medium text-blue-600 dark:text-blue-400 mb-2">Student-Centered</h4>
+                            <p class="text-gray-600 dark:text-gray-400">
+                                Interactive elements maintain engagement. AI tutoring provides personalized support. 
+                                Multiple learning modalities accommodate different preferences and learning styles.
+                            </p>
+                        </div>
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded border">
+                            <h4 class="font-medium text-purple-600 dark:text-purple-400 mb-2">Scalable &amp; Sustainable</h4>
+                            <p class="text-gray-600 dark:text-gray-400">
+                                Once developed, lessons can be reused across multiple classes. AI tutoring reduces 
+                                teacher workload while providing 24/7 student support. Easy to update and improve.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Future Enhancements -->
+                <div class="mt-6 p-5 bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg border border-green-300 dark:border-green-600">
+                    <h3 class="font-semibold text-green-800 dark:text-green-200 mb-4">🚀 Future Enhancements</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <h4 class="font-medium text-green-700 dark:text-green-300 mb-2">Data Analytics</h4>
+                            <ul class="space-y-1 text-gray-600 dark:text-gray-400">
+                                <li>• Real-time comprehension tracking</li>
+                                <li>• Common misconception identification</li>
+                                <li>• Individual progress monitoring</li>
+                                <li>• Adaptive content difficulty</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-green-700 dark:text-green-300 mb-2">Enhanced AI Features</h4>
+                            <ul class="space-y-1 text-gray-600 dark:text-gray-400">
+                                <li>• Voice interaction capabilities</li>
+                                <li>• Multilingual support</li>
+                                <li>• Advanced writing assessment</li>
+                                <li>• Peer collaboration tools</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div></section>
+
+        <!-- Credits & Attribution -->
+        <section class="mb-8">
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4 text-purple-800 dark:text-purple-200">👨‍🏫 Credits &amp; Attribution</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-3">Course Developer &amp; Instructor</h3>
+                        <div class="space-y-2 text-sm">
+                            <p class="font-medium text-gray-800 dark:text-gray-200">Dr Simon Wang</p>
+                            <p class="text-gray-600 dark:text-gray-400">Lecturer in English and Innovation Officer</p>
+                            <p class="text-gray-600 dark:text-gray-400">The Language Centre</p>
+                            <p class="text-gray-600 dark:text-gray-400">Hong Kong Baptist University (HKBU)</p>
+                            <div class="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
+                                <p class="text-xs">
+                                    <span class="font-medium">Email:</span> 
+                                    <a href="mailto:simonwang@hkbu.edu.hk" class="text-purple-600 dark:text-purple-400 hover:underline">
+                                        simonwang@hkbu.edu.hk
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-3">Innovation &amp; Technology</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                <h4 class="font-medium text-blue-700 dark:text-blue-300 mb-1">Platform</h4>
+                                <p class="text-gray-600 dark:text-gray-400">Built with Poe App Creator - interactive educational content development</p>
+                            </div>
+                            <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                                <h4 class="font-medium text-green-700 dark:text-green-300 mb-1">AI Integration</h4>
+                                <p class="text-gray-600 dark:text-gray-400">Custom Bytewise chatbot platform for specialized language tutoring</p>
+                            </div>
+                            <div class="p-3 bg-orange-50 dark:bg-orange-900/20 rounded">
+                                <h4 class="font-medium text-orange-700 dark:text-orange-300 mb-1">Design Philosophy</h4>
+                                <p class="text-gray-600 dark:text-gray-400">AI as learning partner, not replacement - enhancing human teaching</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg border border-purple-300 dark:border-purple-600">
+                    <p class="text-sm text-purple-800 dark:text-purple-200 text-center">
+                        <span class="font-medium">Acknowledgment:</span> This interactive lesson demonstrates innovative approaches to language education, 
+                        combining traditional pedagogical principles with cutting-edge AI technology to create engaging, 
+                        personalized learning experiences for university English students.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Dark mode setup
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Slide data
+        const slides = [
+            {
+                title: "What is Text Coherence?",
+                content: `
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">🧩</div>
+                        <h2 class="text-2xl font-bold mb-6">Text Coherence</h2>
+                        <div class="text-left max-w-4xl mx-auto">
+                            <p class="text-lg mb-4">Text coherence is the quality that makes a text logically connected and easy to follow.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-green-100 dark:bg-green-900/30 p-4 rounded">
+                                    <h3 class="font-semibold text-green-700 dark:text-green-300 mb-2">✅ Coherent Text</h3>
+                                    <ul class="text-sm space-y-1">
+                                        <li>• Ideas flow smoothly</li>
+                                        <li>• Clear connections between sentences</li>
+                                        <li>• Logical progression of thoughts</li>
+                                        <li>• Easy to follow and understand</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-red-100 dark:bg-red-900/30 p-4 rounded">
+                                    <h3 class="font-semibold text-red-700 dark:text-red-300 mb-2">❌ Incoherent Text</h3>
+                                    <ul class="text-sm space-y-1">
+                                        <li>• Abrupt topic changes</li>
+                                        <li>• Missing connections</li>
+                                        <li>• Confusing structure</li>
+                                        <li>• Difficult to follow</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Transitional Words & Phrases",
+                content: `
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">🔗</div>
+                        <h2 class="text-xl font-bold mb-6">Transitional Words & Phrases</h2>
+                        <div class="text-left max-w-5xl mx-auto">
+                            <p class="text-lg mb-6">Transitional words signal relationships between ideas and guide readers through your argument.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-2">Addition</h3>
+                                        <p class="text-sm"><strong>furthermore, moreover, in addition, additionally</strong></p>
+                                        <p class="text-xs italic mt-1">"The study shows clear results. <strong>Furthermore</strong>, the methodology was rigorous."</p>
+                                    </div>
+                                    <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-red-700 dark:text-red-300 mb-2">Contrast</h3>
+                                        <p class="text-sm"><strong>however, nevertheless, on the other hand, in contrast</strong></p>
+                                        <p class="text-xs italic mt-1">"Many support this view. <strong>However</strong>, critics argue otherwise."</p>
+                                    </div>
+                                    <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-green-700 dark:text-green-300 mb-2">Cause & Effect</h3>
+                                        <p class="text-sm"><strong>therefore, consequently, as a result, thus</strong></p>
+                                        <p class="text-xs italic mt-1">"The data was incomplete. <strong>Consequently</strong>, the analysis was limited."</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-2">Examples</h3>
+                                        <p class="text-sm"><strong>for example, for instance, such as, to illustrate</strong></p>
+                                        <p class="text-xs italic mt-1">"Several factors contribute to this. <strong>For example</strong>, economic conditions matter."</p>
+                                    </div>
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-orange-700 dark:text-orange-300 mb-2">Sequence</h3>
+                                        <p class="text-sm"><strong>first, second, next, finally, subsequently</strong></p>
+                                        <p class="text-xs italic mt-1">"<strong>First</strong>, we collected data. <strong>Then</strong>, we analyzed patterns."</p>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                                        <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Conclusion</h3>
+                                        <p class="text-sm"><strong>in conclusion, to summarize, overall, in sum</strong></p>
+                                        <p class="text-xs italic mt-1">"<strong>Overall</strong>, the evidence supports our hypothesis."</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Pronoun Reference & Repetition",
+                content: `
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">👉</div>
+                        <h2 class="text-xl font-bold mb-6">Pronoun Reference & Repetition</h2>
+                        <div class="text-left max-w-5xl mx-auto">
+                            <p class="text-lg mb-6">These devices create connections by referring back to previously mentioned ideas or repeating key concepts.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-3">Demonstrative Pronouns</h3>
+                                        <div class="space-y-2 text-sm">
+                                            <p><strong>this, that, these, those</strong></p>
+                                            <div class="bg-white dark:bg-gray-800 p-3 rounded border-l-4 border-blue-400">
+                                                <p>"Climate change threatens coastal cities. <strong>This problem</strong> requires immediate action."</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-green-700 dark:text-green-300 mb-3">Personal Pronouns</h3>
+                                        <div class="space-y-2 text-sm">
+                                            <p><strong>it, they, them (referring to specific nouns)</strong></p>
+                                            <div class="bg-white dark:bg-gray-800 p-3 rounded border-l-4 border-green-400">
+                                                <p>"Researchers conducted several studies. <strong>They</strong> found significant correlations in the data."</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-3">Lexical Repetition</h3>
+                                        <div class="space-y-2 text-sm">
+                                            <p><strong>Repeating key terms throughout</strong></p>
+                                            <div class="bg-white dark:bg-gray-800 p-3 rounded border-l-4 border-purple-400">
+                                                <p>"<strong>Education</strong> shapes society. Quality <strong>education</strong> empowers individuals and strengthens communities."</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-orange-700 dark:text-orange-300 mb-3">Synonyms & Related Terms</h3>
+                                        <div class="space-y-2 text-sm">
+                                            <p><strong>Using varied but related vocabulary</strong></p>
+                                            <div class="bg-white dark:bg-gray-800 p-3 rounded border-l-4 border-orange-400">
+                                                <p>"The <strong>study</strong> examined student performance. The <strong>research</strong> revealed important patterns."</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Logical Organization",
+                content: `
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">📏</div>
+                        <h2 class="text-xl font-bold mb-6">Logical Organization Patterns</h2>
+                        <div class="text-left max-w-5xl mx-auto">
+                            <p class="text-lg mb-6">How you arrange ideas creates coherence through predictable, logical patterns.</p>
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-blue-700 dark:text-blue-300 mb-2">🔄 Cause and Effect</h3>
+                                        <p class="text-sm mb-2">Show how one event leads to another</p>
+                                        <div class="text-xs bg-white dark:bg-gray-800 p-2 rounded">
+                                            "Rising temperatures → ice melting → sea level rise → coastal flooding"
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-green-700 dark:text-green-300 mb-2">📊 General to Specific</h3>
+                                        <p class="text-sm mb-2">Start broad, then narrow down</p>
+                                        <div class="text-xs bg-white dark:bg-gray-800 p-2 rounded">
+                                            "Technology impacts education → online learning tools → virtual reality in classrooms"
+                                        </div>
+                                    </div>
+                                    <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-purple-700 dark:text-purple-300 mb-2">⚖️ Compare and Contrast</h3>
+                                        <p class="text-sm mb-2">Examine similarities and differences</p>
+                                        <div class="text-xs bg-white dark:bg-gray-800 p-2 rounded">
+                                            "Both methods are effective, but Method A is faster while Method B is more accurate"
+                                        </div>
+                                    </div>
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded">
+                                        <h3 class="font-semibold text-orange-700 dark:text-orange-300 mb-2">⏰ Chronological Order</h3>
+                                        <p class="text-sm mb-2">Arrange events by time sequence</p>
+                                        <div class="text-xs bg-white dark:bg-gray-800 p-2 rounded">
+                                            "First → Next → Then → Finally"
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded border-l-4 border-gray-400">
+                                    <h4 class="font-semibold mb-2">💡 Pro Tip: Signal Your Pattern</h4>
+                                    <p class="text-sm">Help readers follow your logic by signaling which pattern you're using: "There are three main causes..." or "In contrast to this view..." or "The process involves several steps..."</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Analyzing Coherence",
+                content: `
+                    <h2 class="text-xl font-bold mb-6 text-center">How to Analyze Text Coherence</h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-l-4 border-blue-500">
+                            <div class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">1</div>
+                            <div>
+                                <h3 class="font-semibold">Read for Overall Flow</h3>
+                                <p class="text-sm">Does the text move smoothly from one idea to the next?</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border-l-4 border-green-500">
+                            <div class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">2</div>
+                            <div>
+                                <h3 class="font-semibold">Identify Connecting Words</h3>
+                                <p class="text-sm">Look for transitions, pronouns, and repeated terms</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded border-l-4 border-purple-500">
+                            <div class="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">3</div>
+                            <div>
+                                <h3 class="font-semibold">Check Logical Relationships</h3>
+                                <p class="text-sm">Are cause-effect, comparison, or sequence relationships clear?</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded border-l-4 border-orange-500">
+                            <div class="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">4</div>
+                            <div>
+                                <h3 class="font-semibold">Note Problem Areas</h3>
+                                <p class="text-sm">Where do you feel confused or need to re-read?</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        // Questions corresponding to each slide
+        const slideQuestions = [
+            {
+                type: 'mcq',
+                question: 'What is the main characteristic of a coherent text?',
+                options: [
+                    'It uses complex vocabulary',
+                    'Ideas flow logically and connect smoothly', 
+                    'It contains many examples',
+                    'It is written in formal language'
+                ],
+                correct: 1,
+                explanation: 'Correct! Coherent texts have ideas that flow logically and connect smoothly, making them easy to follow and understand.'
+            },
+            {
+                type: 'tf',
+                question: 'Transitional words like "however" and "therefore" are the only way to create coherence in a text.',
+                correct: false,
+                explanation: 'False! While transitional words are important, coherence also comes from pronoun reference, repetition of key terms, and logical organization.'
+            },
+            {
+                type: 'mcq',
+                question: 'Why is coherence particularly important in academic writing?',
+                options: [
+                    'It makes writing longer',
+                    'It helps readers follow complex arguments and ideas',
+                    'It sounds more sophisticated',
+                    'It reduces the need for evidence'
+                ],
+                correct: 1,
+                explanation: 'Correct! In academic writing, coherence helps readers follow complex arguments and understand how evidence supports conclusions.'
+            },
+            {
+                type: 'tf',
+                question: 'When analyzing text coherence, you should focus only on connecting words and ignore the overall logical flow.',
+                correct: false,
+                explanation: 'False! Coherence analysis requires examining both specific devices (like connecting words) AND the overall logical flow and organization of ideas.'
+            },
+            {
+                type: 'mcq',
+                question: 'Which step should you take FIRST when analyzing text coherence?',
+                options: [
+                    'Count all the transitional words',
+                    'Read for overall flow and understanding',
+                    'List all pronoun references',
+                    'Check grammar and spelling'
+                ],
+                correct: 1,
+                explanation: 'Correct! You should first read for overall flow to get a sense of how well the text hangs together before analyzing specific coherence devices.'
+            }
+        ];
+
+        // Application state
+        let currentSlide = 0;
+        let studentNotes = {
+            coherentDevices: '',
+            incoherentProblems: '',
+            improvementSuggestions: '',
+            aiFeedback: '',
+            discussionNotes: '',
+            finalReflection: ''
+        };
+
+        // Initialize application
+        function init() {
+            setupEventListeners();
+            loadSlide(0);
+            loadQuestion(0);
+        }
+
+        function setupEventListeners() {
+            // Slide navigation
+            document.getElementById('prevSlide').addEventListener('click', () => changeSlide(-1));
+            document.getElementById('nextSlide').addEventListener('click', () => changeSlide(1));
+
+            // Toggle functionality
+            document.getElementById('teacherNotesToggle').addEventListener('click', toggleTeacherNotes);
+            document.getElementById('developmentToggle').addEventListener('click', toggleDevelopment);
+
+            // Note-taking
+            document.getElementById('coherentDevices').addEventListener('input', (e) => {
+                studentNotes.coherentDevices = e.target.value;
+            });
+            document.getElementById('incoherentProblems').addEventListener('input', (e) => {
+                studentNotes.incoherentProblems = e.target.value;
+            });
+            document.getElementById('improvementSuggestions').addEventListener('input', (e) => {
+                studentNotes.improvementSuggestions = e.target.value;
+            });
+            document.getElementById('aiFeedback').addEventListener('input', (e) => {
+                studentNotes.aiFeedback = e.target.value;
+            });
+            document.getElementById('discussionNotes').addEventListener('input', (e) => {
+                studentNotes.discussionNotes = e.target.value;
+            });
+            document.getElementById('finalReflection').addEventListener('input', (e) => {
+                studentNotes.finalReflection = e.target.value;
+            });
+
+            // Buttons
+            document.getElementById('copyForAIBtn').addEventListener('click', copyForAI);
+            document.getElementById('saveNotesBtn').addEventListener('click', saveNotes);
+            document.getElementById('exportNotesBtn').addEventListener('click', exportNotes);
+            document.getElementById('exportAllNotesBtn').addEventListener('click', exportNotes);
+
+            // Chat demo
+            document.getElementById('startDemo').addEventListener('click', startChatDemo);
+            document.getElementById('nextStep').addEventListener('click', nextChatStep);
+            document.getElementById('resetDemo').addEventListener('click', resetChatDemo);
+        }
+
+        function loadSlide(index) {
+            const slide = slides[index];
+            document.getElementById('slideContainer').innerHTML = slide.content;
+            document.getElementById('slideCounter').textContent = `${index + 1} / ${slides.length}`;
+            
+            // Update navigation buttons
+            document.getElementById('prevSlide').disabled = index === 0;
+            document.getElementById('nextSlide').disabled = index === slides.length - 1;
+        }
+
+        function loadQuestion(index) {
+            const question = slideQuestions[index];
+            const container = document.getElementById('questionContainer');
+            
+            let html = `<p class="font-medium mb-3">${question.question}</p>`;
+            
+            if (question.type === 'mcq') {
+                html += '<div class="space-y-2">';
+                question.options.forEach((option, i) => {
+                    html += `
+                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                            <input type="radio" name="current_question" value="${i}" class="text-primary">
+                            <span>${option}</span>
+                        </label>
+                    `;
+                });
+                html += '</div>';
+            } else if (question.type === 'tf') {
+                html += `
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                            <input type="radio" name="current_question" value="true" class="text-primary">
+                            <span>True</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded">
+                            <input type="radio" name="current_question" value="false" class="text-primary">
+                            <span>False</span>
+                        </label>
+                    </div>
+                `;
+            }
+            
+            html += `<button onclick="checkCurrentAnswer()" class="mt-3 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors">Check Answer</button>`;
+            html += `<div id="currentFeedback" class="mt-2 hidden"></div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function changeSlide(direction) {
+            const newIndex = currentSlide + direction;
+            if (newIndex >= 0 && newIndex < slides.length) {
+                currentSlide = newIndex;
+                loadSlide(currentSlide);
+                loadQuestion(currentSlide);
+            }
+        }
+
+        function checkCurrentAnswer() {
+            const question = slideQuestions[currentSlide];
+            const selectedInput = document.querySelector('input[name="current_question"]:checked');
+            const feedbackDiv = document.getElementById('currentFeedback');
+            
+            if (!selectedInput) {
+                feedbackDiv.innerHTML = '<p class="text-orange-500 font-medium">Please select an answer.</p>';
+                feedbackDiv.classList.remove('hidden');
+                return;
+            }
+            
+            let isCorrect = false;
+            
+            if (question.type === 'mcq') {
+                const selectedIndex = parseInt(selectedInput.value);
+                isCorrect = selectedIndex === question.correct;
+            } else if (question.type === 'tf') {
+                isCorrect = (selectedInput.value === 'true') === question.correct;
+            }
+            
+            const feedbackClass = isCorrect ? 'text-green-600' : 'text-red-600';
+            const icon = isCorrect ? '✅' : '❌';
+            
+            const feedbackHTML = `
+                <div class="mt-3 p-4 rounded-lg ${isCorrect ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
+                    <p class="${feedbackClass} font-medium">${icon} ${question.explanation}</p>
+                </div>
+            `;
+            
+            feedbackDiv.innerHTML = feedbackHTML;
+            feedbackDiv.classList.remove('hidden');
+        }
+
+        function toggleTeacherNotes() {
+            const section = document.getElementById('teacherNotesSection');
+            const icon = document.getElementById('teacherNotesIcon');
+            
+            if (section.classList.contains('collapsed')) {
+                section.classList.remove('collapsed');
+                section.classList.add('expanded');
+                icon.textContent = '▲';
+            } else {
+                section.classList.remove('expanded');
+                section.classList.add('collapsed');
+                icon.textContent = '▼';
+            }
+        }
+
+        function toggleDevelopment() {
+            const section = document.getElementById('developmentSection');
+            const icon = document.getElementById('developmentIcon');
+            
+            if (section.classList.contains('collapsed')) {
+                section.classList.remove('collapsed');
+                section.classList.add('expanded');
+                icon.textContent = '▲';
+            } else {
+                section.classList.remove('expanded');
+                section.classList.add('collapsed');
+                icon.textContent = '▼';
+            }
+        }
+
+        function copyForAI() {
+            const aiPrompt = `I'm learning about text coherence in my university English class. I've analyzed two texts - one coherent and one less coherent - and identified coherence devices and problems.
+
+Please review my analysis and help me:
+1. Verify if I correctly identified coherence devices
+2. Point out any patterns I missed
+3. Suggest additional ways to improve the incoherent text
+4. Explain why these devices matter for academic writing
+
+## My Analysis:
+
+**Coherence devices I identified in Text A:**
+${studentNotes.coherentDevices}
+
+**Problems I noticed in Text B:**
+${studentNotes.incoherentProblems}
+
+**How I would improve Text B:**
+${studentNotes.improvementSuggestions}
+
+Please ask follow-up questions to test my understanding.`;
+
+            navigator.clipboard.writeText(aiPrompt).then(() => {
+                showCustomAlert('📋 Analysis copied to clipboard! You can now paste this into your AI assistant.');
+            }).catch(() => {
+                showCustomAlert('❌ Could not copy to clipboard. Please copy the text manually.');
+            });
+        }
+
+        function saveNotes() {
+            showCustomAlert('📝 Notes saved for this session! Use Export to save permanently.');
+        }
+
+        function exportNotes() {
+            const markdown = `# UE1: Text Coherence Analysis
+
+## Student Learning Summary
+**Date:** ${new Date().toLocaleDateString()}
+**Topic:** Analyzing Text Coherence in Academic Writing
+
+## Text Analysis
+
+### Coherence Devices Identified (Text A):
+${studentNotes.coherentDevices}
+
+### Problems in Incoherent Text (Text B):
+${studentNotes.incoherentProblems}
+
+### Improvement Suggestions:
+${studentNotes.improvementSuggestions}
+
+## AI Consultation Insights:
+${studentNotes.aiFeedback}
+
+## Class Discussion Notes:
+${studentNotes.discussionNotes}
+
+## Personal Reflection:
+${studentNotes.finalReflection}
+
+---
+*Generated from UE1 Text Coherence Lesson*`;
+
+            downloadMarkdown(markdown, 'text-coherence-analysis.md');
+        }
+
+        function downloadMarkdown(content, filename) {
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function showTutorResponse(option) {
+            const responseDiv = document.getElementById('tutorResponse');
+            let responseContent = '';
+            
+            if (option === 'published') {
+                responseContent = `
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">AI</div>
+                        <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg flex-1">
+                            <p class="text-sm mb-2">Great choice! Let's analyze a published text for coherence devices.</p>
+                            <p class="text-sm mb-3">Please paste a paragraph from an academic article, news piece, or textbook. I'll help you identify:</p>
+                            <ul class="text-xs space-y-1 ml-4">
+                                <li>• Transitional words and phrases</li>
+                                <li>• Pronoun references and repetition</li>
+                                <li>• Logical organization patterns</li>
+                                <li>• Overall coherence effectiveness</li>
+                            </ul>
+                            <p class="text-xs mt-2 italic">Try pasting the coherent climate change text from your lesson for practice!</p>
+                        </div>
+                    </div>
+                `;
+            } else if (option === 'student') {
+                responseContent = `
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">AI</div>
+                        <div class="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg flex-1">
+                            <p class="text-sm mb-2">Perfect! I'll help you improve your own writing.</p>
+                            <p class="text-sm mb-3">Please share a paragraph from your essay, assignment, or any writing you'd like to improve. I'll analyze:</p>
+                            <ul class="text-xs space-y-1 ml-4">
+                                <li>• How well your ideas connect</li>
+                                <li>• Missing or weak transitions</li>
+                                <li>• Unclear pronoun references</li>
+                                <li>• Suggestions for better flow</li>
+                            </ul>
+                            <p class="text-xs mt-2 italic">Don't worry - this is a safe space to practice and improve!</p>
+                        </div>
+                    </div>
+                `;
+            } else if (option === 'practice') {
+                responseContent = `
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">AI</div>
+                        <div class="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg flex-1">
+                            <p class="text-sm mb-2">Excellent! Let's practice writing coherent texts together.</p>
+                            <p class="text-sm mb-3">I can guide you through exercises like:</p>
+                            <ul class="text-xs space-y-1 ml-4">
+                                <li>• Adding transitions to improve flow</li>
+                                <li>• Rewriting choppy paragraphs</li>
+                                <li>• Creating logical organization</li>
+                                <li>• Building coherent arguments</li>
+                            </ul>
+                            <div class="mt-3 p-2 bg-white dark:bg-gray-800 rounded border">
+                                <p class="text-xs font-medium">Quick Exercise: Can you improve this sentence?</p>
+                                <p class="text-xs italic">"Social media is popular. Young people use it daily. It affects their mental health."</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            responseDiv.innerHTML = responseContent;
+            responseDiv.classList.remove('hidden');
+        }
+
+        // Chat demo data
+        const chatSteps = [
+            {
+                speaker: 'ai',
+                content: 'Hi I am your coherence tutor. Please type menu to get started.'
+            },
+            {
+                speaker: 'user',
+                content: 'menu'
+            },
+            {
+                speaker: 'ai',
+                content: `Great! Here are your three options--please choose one to get started:
+
+<strong>Analyze a Published Text</strong><br>
+Share a paragraph or short excerpt from a published source (article, textbook, etc.), and I'll break down its coherence features for you.
+
+<strong>Get Feedback on Your Own Writing</strong><br>
+Paste a paragraph or section you've written, and I'll provide constructive feedback and suggestions for improving coherence.
+
+<strong>Guided Practice Exercises</strong><br>
+Try some interactive activities to strengthen your skills with transitions, pronoun reference, and logical organization.
+
+Which option would you like to choose? Just reply with the number or the description!`
+            },
+            {
+                speaker: 'user',
+                content: '3'
+            },
+            {
+                speaker: 'ai',
+                content: `Fantastic! Let's do some guided practice. Here are three types of coherence exercises you can choose from:
+
+<strong>Fix This Choppy Paragraph:</strong><br>
+You'll get a paragraph with weak flow. Your task is to improve its coherence.
+
+<strong>Add Appropriate Transitions:</strong><br>
+You'll receive sentences that need connecting words. You'll choose or suggest suitable transitions.
+
+<strong>Improve Pronoun Reference:</strong><br>
+You'll work on sentences where pronouns are unclear. Your job is to clarify the references.
+
+Which exercise would you like to try first? Please reply with the number or the description!`
+            },
+            {
+                speaker: 'user',
+                content: '1'
+            },
+            {
+                speaker: 'ai',
+                content: `Great choice! Here's a choppy paragraph that needs better coherence. Your task: revise it to improve flow and connection between ideas. You can add transitions, adjust sentence structure, or reword sentences as needed.
+
+<strong>Choppy Paragraph:</strong><br>
+Many people exercise daily. Some people eat fruits and vegetables. Exercise is good for your heart. Eating fruits and vegetables has vitamins. People want to stay healthy.
+
+<strong>Instructions:</strong><br>
+Rewrite this paragraph to make it smoother and more logical. Try to:
+• Add appropriate transitions
+• Connect related ideas
+• Clarify pronoun references if needed
+
+When you're ready, share your revised version! If you'd like a hint or example to get started, just ask.`
+            },
+            {
+                speaker: 'user',
+                content: 'While many people exercise daily which is good for their hearts, some people eat fruits and vegetables that provide vitamins. Both can help people stay healthy'
+            },
+            {
+                speaker: 'ai',
+                content: `Excellent effort! 🌟 You combined related ideas, used a complex sentence, and added a nice summary at the end. Let me give you some detailed feedback:
+
+<strong>What you did well:</strong>
+• <strong>Combined sentences:</strong> You merged short, choppy statements into a more fluid one.
+• <strong>Added logical connections:</strong> Using "while" shows contrast and variety in healthy habits.
+• <strong>Clarified pronouns:</strong> "Their hearts" and "people" are clear.
+• <strong>Good summary sentence:</strong> "Both can help people stay healthy" wraps it up nicely.
+
+<strong>Suggestions for even better coherence:</strong>
+• You could add a transition at the beginning for extra smoothness (e.g., "To maintain good health,").
+• Consider specifying "exercise" and "eating fruits and vegetables" as examples of healthy habits.
+• You might clarify that both habits are important, not just separate alternatives.
+
+<strong>Sample revision:</strong><br>
+To maintain good health, many people exercise daily, which is good for their hearts, while others eat fruits and vegetables that provide essential vitamins. Both habits play an important role in helping people stay healthy.
+
+<strong>Reflection question:</strong><br>
+Why do you think adding transitions like "To maintain good health" or "both habits" helps make the paragraph clearer for readers?
+
+Would you like to try revising the paragraph again, or move on to another type of exercise?`
+            }
+        ];
+
+        let currentChatStep = 0;
+
+        // Dynamic annotations for each chat step
+        const stepAnnotations = [
+            {
+                title: "Friendly Introduction",
+                content: `<p>Notice the casual, welcoming tone that reduces student anxiety. The AI immediately provides clear instructions for getting started.</p>`,
+                highlight: "Reduces Barriers",
+                benefit: "Lowers intimidation factor compared to formal academic settings."
+            },
+            {
+                title: "Student Initiative",
+                content: `<p>Students learn to navigate the interface independently, building confidence in AI interaction.</p>`,
+                highlight: "Self-Direction",
+                benefit: "Students take ownership of their learning journey."
+            },
+            {
+                title: "Clear Option Structure",
+                content: `<p>Three distinct pathways cater to different learning needs - analysis, feedback, or practice. Each has clear descriptions.</p>`,
+                highlight: "Differentiated Learning",
+                benefit: "Accommodates diverse learning preferences and skill levels."
+            },
+            {
+                title: "Student Choice",
+                content: `<p>Students choose their own learning path, increasing engagement and motivation.</p>`,
+                highlight: "Learner Agency",
+                benefit: "Personalized experience based on individual needs and interests."
+            },
+            {
+                title: "Scaffolded Options",
+                content: `<p>Within practice exercises, further choices help students select appropriate difficulty levels.</p>`,
+                highlight: "Progressive Difficulty",
+                benefit: "Allows students to start where they feel comfortable and build skills gradually."
+            },
+            {
+                title: "Specific Task",
+                content: `<p>Notice how the number choice leads to a focused selection - students aren't overwhelmed by too many options.</p>`,
+                highlight: "Focused Learning",
+                benefit: "Prevents decision paralysis while maintaining choice."
+            },
+            {
+                title: "Contextual Practice",
+                content: `<p>Real paragraph with authentic problems students commonly face. Instructions are clear and actionable.</p>`,
+                highlight: "Authentic Assessment",
+                benefit: "Students practice skills with realistic, relevant materials."
+            },
+            {
+                title: "Student Production",
+                content: `<p>Students actively create rather than just consume. This attempt shows engagement with the task.</p>`,
+                highlight: "Active Learning",
+                benefit: "Learning through doing rather than passive consumption."
+            },
+            {
+                title: "Constructive Feedback",
+                content: `<p>Balanced feedback: specific praise first, then gentle suggestions. Notice the encouraging tone and concrete examples.</p>`,
+                highlight: "Growth Mindset",
+                benefit: "Builds confidence while providing clear direction for improvement."
+            }
+        ];
+
+        function startChatDemo() {
+            currentChatStep = 0;
+            const chatContainer = document.getElementById('chatDemo');
+            chatContainer.innerHTML = '';
+            
+            document.getElementById('startDemo').classList.add('hidden');
+            document.getElementById('nextStep').classList.remove('hidden');
+            document.getElementById('resetDemo').classList.remove('hidden');
+            
+            displayChatStep();
+        }
+
+        function nextChatStep() {
+            currentChatStep++;
+            if (currentChatStep < chatSteps.length) {
+                displayChatStep();
+            } else {
+                document.getElementById('nextStep').classList.add('hidden');
+            }
+        }
+
+        function resetChatDemo() {
+            currentChatStep = 0;
+            const chatContainer = document.getElementById('chatDemo');
+            chatContainer.innerHTML = '';
+            
+            document.getElementById('startDemo').classList.remove('hidden');
+            document.getElementById('nextStep').classList.add('hidden');
+            document.getElementById('resetDemo').classList.add('hidden');
+        }
+
+        function displayChatStep() {
+            const chatContainer = document.getElementById('chatDemo');
+            const step = chatSteps[currentChatStep];
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start space-x-3 fade-in';
+            
+            if (step.speaker === 'ai') {
+                messageDiv.innerHTML = `
+                    <div class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">AI</div>
+                    <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg flex-1">
+                        <div class="text-sm">${step.content}</div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">U</div>
+                    <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg flex-1">
+                        <div class="text-sm font-medium">${step.content}</div>
+                    </div>
+                `;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Update annotations
+            updateAnnotations();
+            
+            // Update button text
+            if (currentChatStep === chatSteps.length - 1) {
+                document.getElementById('nextStep').textContent = '✅ Demo Complete';
+            }
+        }
+
+        function updateAnnotations() {
+            const annotationContainer = document.getElementById('annotationContainer');
+            const annotation = stepAnnotations[currentChatStep];
+            
+            if (annotation) {
+                annotationContainer.innerHTML = `
+                    <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border-l-4 border-blue-500">
+                        <h5 class="font-medium text-blue-700 dark:text-blue-300 mb-2">🎯 ${annotation.title}</h5>
+                        <div class="text-gray-600 dark:text-gray-400 text-xs mb-2">${annotation.content}</div>
+                        <div class="bg-white dark:bg-gray-800 p-2 rounded text-xs">
+                            <span class="font-medium text-green-600 dark:text-green-400">${annotation.highlight}:</span>
+                            <span class="text-gray-700 dark:text-gray-300"> ${annotation.benefit}</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                        <h5 class="font-medium text-yellow-700 dark:text-yellow-300 mb-2">📚 Supplements Lecture</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">
+                            ${getSupplementDescription(currentChatStep)}
+                        </p>
+                    </div>
+                    <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
+                        <h5 class="font-medium text-purple-700 dark:text-purple-300 mb-2">🤖 AI Enhancement</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">
+                            ${getAIDescription(currentChatStep)}
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        function getSupplementDescription(step) {
+            const descriptions = [
+                "Bridges theory to practice by providing immediate, accessible help.",
+                "Reinforces student agency concepts from classroom discussion.",
+                "Applies the coherence devices taught in slides to interactive choices.",
+                "Transforms passive learning into active decision-making.",
+                "Implements scaffolding principles discussed in pedagogical training.",
+                "Demonstrates focused learning approach from educational theory.",
+                "Provides authentic practice materials that connect to real writing challenges.",
+                "Encourages productive struggle and learning through creation.",
+                "Models the constructive feedback techniques teachers aim to provide."
+            ];
+            return descriptions[step] || "Enhances classroom learning through personalized interaction.";
+        }
+
+        function getAIDescription(step) {
+            const descriptions = [
+                "Always-available support reduces pressure on office hours and teacher availability.",
+                "Builds digital literacy while maintaining pedagogical focus.",
+                "Adaptive pathways impossible to achieve in traditional one-size-fits-all instruction.",
+                "Respects individual learning pace and preferences without slowing class progress.",
+                "Provides multiple entry points for students with different skill levels.",
+                "Maintains focus while offering choices, reducing cognitive overload.",
+                "Generates unlimited practice materials with consistent quality and difficulty.",
+                "Enables immediate feedback that human teachers cannot provide at scale.",
+                "Delivers personalized, detailed feedback that helps students understand their specific strengths and areas for improvement."
+            ];
+            return descriptions[step] || "Enhances learning through AI-powered personalization.";
+        }
+
+        function showCustomAlert(message) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
+                    <p class="text-gray-700 dark:text-gray-300 mb-4">${message}</p>
+                    <div class="flex justify-end">
+                        <button class="px-4 py-2 bg-primary text-white hover:bg-primary-dark rounded" onclick="this.closest('.fixed').remove()">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Initialize the application
+        init();
+    </script>
+
+
+</body></html>
